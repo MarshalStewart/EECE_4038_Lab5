@@ -1,4 +1,4 @@
-# 1 "main.c"
+# 1 "main_tx.c"
 # 1 "<built-in>" 1
 # 1 "<built-in>" 3
 # 288 "<built-in>" 3
@@ -6,7 +6,7 @@
 # 1 "<built-in>" 2
 # 1 "C:/Program Files/Microchip/MPLABX/v6.00/packs/Microchip/PIC16Fxxx_DFP/1.3.42/xc8\\pic\\include\\language_support.h" 1 3
 # 2 "<built-in>" 2
-# 1 "main.c" 2
+# 1 "main_tx.c" 2
 
 
 
@@ -2529,119 +2529,70 @@ extern __bank0 unsigned char __resetbits;
 extern __bank0 __bit __powerdown;
 extern __bank0 __bit __timeout;
 # 29 "C:/Program Files/Microchip/MPLABX/v6.00/packs/Microchip/PIC16Fxxx_DFP/1.3.42/xc8\\pic\\include\\xc.h" 2 3
-# 25 "main.c" 2
-
-
-void setupUART();
-void setupLED();
-void setupISR();
-char rx_char();
-void tx_char(char a);
- __attribute__((picinterrupt(("")))) void isr_rx();
-
-
-char data;
-
-void setupUART(){
-
-    TRISC = 0x0;
-    TRISC = 0x80;
-
-
-    TXSTAbits.BRGH = 1;
- SPBRG = (8000000 - 9600*16)/(9600*16);
-    TXSTAbits.SYNC = 0;
-    RCSTAbits.SPEN = 1;
-    RCSTAbits.CREN = 1;
-    TXSTAbits.TXEN = 1;
-    TXSTAbits.TX9 = 0;
-
-    INTCONbits. GIE = 1;
-    INTCONbits.PEIE = 1;
-    PIE1bits.RCIE = 1;
-
-}
-
-void setupLED(){
-    PORTB = 0x0;
-    TRISB = 0x0;
-    ANSEL = 0x0;
-    ANSELH = 0x0;
-
-}
-
+# 25 "main_tx.c" 2
+# 176 "main_tx.c"
 char rx_char(void)
 {
     while(!RCIF);
-    RB2 = 1;
-    _delay((unsigned long)((100)*(8000000/4000.0)));
-    RB2 = 0;
-    _delay((unsigned long)((100)*(8000000/4000.0)));
     return RCREG;
 }
 
 void tx_char(char a)
 {
-
-    RB0 = 1;
-    _delay((unsigned long)((100)*(8000000/4000.0)));
-    RB0 = 0;
     TXREG=a;
     while(!TRMT);
+}
+# 198 "main_tx.c"
+char *str;
+
+void tx_str(char *a)
+{
+    TXIE = 1;
+    str = a;
+    TXIF = 1;
+    while(*(str-1));
+    TXIE = 0;
+    tx_char(0x0D);
 }
 
 __attribute__((picinterrupt(("")))) void ISR(void)
 {
+    char a;
 
-    RB1 = 1;
-    _delay((unsigned long)((100)*(8000000/4000.0)));
-    RB1 = 0;
-    _delay((unsigned long)((100)*(8000000/4000.0)));
-    if(RCIF==1)
+    if(TXIF==1)
     {
-        if(RCSTAbits.OERR)
-        {
-
-            RB3 = 1;
-            _delay((unsigned long)((100)*(8000000/4000.0)));
-            RB3 = 0;
-            _delay((unsigned long)((100)*(8000000/4000.0)));
-
-            CREN = 0;
-            __nop();
-            CREN = 1;
-        }
-
-        data = rx_char();
-
-
-        if (data == 'a')
-        {
-            RB0 = 1;
-            RB1 = 1;
-            RB2 = 1;
-            RB3 = 1;
-            _delay((unsigned long)((5000)*(8000000/4000.0)));
-            RB0 = 0;
-            RB1 = 0;
-            RB2 = 0;
-            RB3 = 0;
-            _delay((unsigned long)((100)*(8000000/4000.0)));
-        }
+        RB0 = 1;
+        TXREG=*str;
+        str++;
+        _delay((unsigned long)((100)*(8000000/4000.0)));
+        RB0 = 0;
+        _delay((unsigned long)((100)*(8000000/4000.0)));
 
     }
 }
 
 void main(void) {
+# 243 "main_tx.c"
+    PORTB = 0x0;
+    TRISB = 0x0;
+    ANSEL = 0x0;
+    ANSELH = 0x0;
 
-    setupUART();
-    setupLED();
+    TRISC |= 0x80;
+    TXSTA = 0x20;
+    RCSTA = 0x90;
+    SPBRG = 31;
+
+    GIE=1;
+    PEIE=1;
+    RCIE=1;
 
     while(1){
-        tx_char('a');
-        _delay((unsigned long)((100)*(8000000/4000.0)));
-    }
 
-    return;
+        tx_str((char *)"Sending string through UART");
+
+        _delay((unsigned long)((100)*(8000000/4000.0)));
+
+    }
 
 }
